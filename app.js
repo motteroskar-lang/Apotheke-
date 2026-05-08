@@ -747,19 +747,56 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') document.getElementById('add-stop-btn').click();
   });
 
-  // Optimize
-  document.getElementById('optimize-btn').addEventListener('click', optimizeRoute);
-
   // Export
   document.getElementById('export-gmaps-btn').addEventListener('click', exportGoogleMaps);
   document.getElementById('copy-route-btn').addEventListener('click', copyRoute);
   document.getElementById('clear-route-btn').addEventListener('click', clearRoute);
 
-  // Sidebar toggle
-  const sidebar = document.getElementById('sidebar');
-  document.getElementById('sidebar-toggle').addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    setTimeout(() => map.invalidateSize(), 310);
+  // ---- Sidebar + Mobile Backdrop ----
+  const sidebar  = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+
+  function isMobile() { return window.innerWidth < 768; }
+
+  function openSidebar() {
+    sidebar.classList.remove('collapsed');
+    if (isMobile()) backdrop.classList.remove('hidden');
+    setTimeout(() => map.invalidateSize(), 320);
+  }
+
+  function closeSidebar() {
+    sidebar.classList.add('collapsed');
+    backdrop.classList.add('hidden');
+    setTimeout(() => map.invalidateSize(), 320);
+  }
+
+  function toggleSidebar() {
+    sidebar.classList.contains('collapsed') ? openSidebar() : closeSidebar();
+  }
+
+  // Start collapsed on mobile
+  if (isMobile()) sidebar.classList.add('collapsed');
+
+  document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+
+  // On mobile: close sidebar after adding a stop (UX: see the map)
+  const origAddStop = addStop;
+  // After optimizing on mobile, close sidebar to show the map
+  const origOptimize = optimizeRoute;
+
+  // Close sidebar on mobile after optimization completes
+  document.getElementById('optimize-btn').addEventListener('click', async () => {
+    await optimizeRoute();
+    if (isMobile()) closeSidebar();
+  }, { once: false });
+
+  // Recheck on resize (rotation)
+  window.addEventListener('resize', () => {
+    if (!isMobile() && sidebar.classList.contains('collapsed')) {
+      // On desktop, keep sidebar open unless user explicitly closed it
+    }
+    map.invalidateSize();
   });
 
   // Settings collapse
