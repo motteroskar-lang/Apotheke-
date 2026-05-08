@@ -146,13 +146,21 @@ function renderDropdown(dropdownEl, results, inputEl, onSelect) {
     const el = document.createElement('div');
     el.className = 'autocomplete-item';
     el.innerHTML = `<div class="place-name">${esc(main)}</div><div class="place-detail">${esc(detail)}</div>`;
-    el.addEventListener('click', () => {
+
+    const handleSelect = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const shortName = [road || main, city].filter(Boolean).join(', ') ||
         item.display_name.split(',').slice(0, 3).join(',').trim();
       inputEl.value = shortName;
       dropdownEl.innerHTML = '';
       onSelect({ address: shortName, displayName: item.display_name, coords: [parseFloat(item.lat), parseFloat(item.lon)] });
-    });
+    };
+
+    // mousedown prevents input blur on desktop; touchend fires before click on mobile
+    el.addEventListener('mousedown', handleSelect);
+    el.addEventListener('touchend', handleSelect, { passive: false });
+
     dropdownEl.appendChild(el);
   });
 }
@@ -184,10 +192,14 @@ let pendingStop = null;
 function addStop(geocoded, priority, note) {
   const stop = { id: state.nextId++, ...geocoded, priority, note: note.trim() };
   state.stops.push(stop);
+  // Bestehende Route ungültig machen (ohne doppeltes renderStops)
+  if (state.routeResult) {
+    state.routeResult = null;
+    document.getElementById('results-card').classList.add('hidden');
+  }
   renderStops();
   updateOptimizeBtn();
   showToast('Adresse hinzugefügt');
-  clearRoute();
 }
 
 function removeStop(id) {
@@ -413,43 +425,46 @@ async function optimizeRoute() {
 
 // ===== ROUTE DRAW =====
 function drawMapRoute(result) {
-  // Map erst jetzt initialisieren und anzeigen
-  initMap();
-  document.getElementById('map-wrap').classList.remove('hidden');
+  // Warten bis der Browser results-card gerendert hat, dann Leaflet initialisieren
+  // requestAnimationFrame stellt sicher dass der DOM gemalt ist bevor Leaflet die Containermaße liest
+  requestAnimationFrame(() => {
+    initMap();
 
-  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
 
-  if (result.geometry) {
-    routeLayer = L.geoJSON(result.geometry, {
-      style: { color: '#1b1b28', weight: 5, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
-    }).addTo(map);
-  } else {
-    routeLayer = L.polyline(result.orderedPoints.map(p => p.coords), {
-      color: '#1b1b28', weight: 4, opacity: 0.65, dashArray: '10, 8', lineCap: 'round'
-    }).addTo(map);
-  }
+    if (result.geometry) {
+      routeLayer = L.geoJSON(result.geometry, {
+        style: { color: '#1b1b28', weight: 5, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
+      }).addTo(map);
+    } else {
+      routeLayer = L.polyline(result.orderedPoints.map(p => p.coords), {
+        color: '#1b1b28', weight: 4, opacity: 0.65, dashArray: '10, 8', lineCap: 'round'
+      }).addTo(map);
+    }
 
-  // Marker
-  Object.values(stopMarkers).forEach(m => map.removeLayer(m));
-  stopMarkers = {};
-  if (depotMarker) { map.removeLayer(depotMarker); depotMarker = null; }
+    // Marker neu setzen
+    Object.values(stopMarkers).forEach(m => map.removeLayer(m));
+    stopMarkers = {};
+    if (depotMarker) { map.removeLayer(depotMarker); depotMarker = null; }
 
-  depotMarker = L.marker(result.orderedPoints[0].coords, { icon: makeDepotIcon() })
-    .addTo(map)
-    .bindPopup(`<strong>Startpunkt</strong><br>${esc(state.depot.address)}`);
-
-  result.orderedStops.forEach((s, i) => {
-    stopMarkers[s.id] = L.marker(s.coords, { icon: makeStopIcon(i + 1, s.priority) })
+    depotMarker = L.marker(result.orderedPoints[0].coords, { icon: makeDepotIcon() })
       .addTo(map)
-      .bindPopup(`<strong>${esc(s.address)}</strong><br>${PRIORITY[s.priority].label}${s.note ? '<br><em>' + esc(s.note) + '</em>' : ''}`);
-  });
+      .bindPopup(`<strong>Startpunkt</strong><br>${esc(state.depot.address)}`);
 
-  if (routeLayer) {
-    setTimeout(() => {
+    result.orderedStops.forEach((s, i) => {
+      stopMarkers[s.id] = L.marker(s.coords, { icon: makeStopIcon(i + 1, s.priority) })
+        .addTo(map)
+        .bindPopup(`<strong>${esc(s.address)}</strong><br>${PRIORITY[s.priority].label}${s.note ? '<br><em>' + esc(s.note) + '</em>' : ''}`);
+    });
+
+    // Nach zweitem Frame: Maße korrigieren und Route einpassen
+    requestAnimationFrame(() => {
       map.invalidateSize();
-      map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
-    }, 120);
-  }
+      if (routeLayer) {
+        map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
+      }
+    });
+  });
 }
 
 // ===== COSTS =====
@@ -595,8 +610,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Stop input
   const stopInput = document.getElementById('stop-input');
   const stopDrop  = document.getElementById('stop-dropdown');
-  attachAutocomplete(stopInput, stopDrop, geo => { pendingStop = geo; });
-  stopInput.addEventListener('input', () => { pendingStop = null; });
+  let blockInputClear = false;
+  attachAutocomplete(stopInput, stopDrop, geo => {
+    blockInputClear = true;   // Dropdown-Auswahl → input-Event ignorieren
+    pendingStop = geo;
+    setTimeout(() => { blockInputClear = false; }, 100);
+  });
+  stopInput.addEventListener('input', () => {
+    if (!blockInputClear) pendingStop = null;
+  });
 
   // Add stop
   document.getElementById('add-stop-btn').addEventListener('click', () => {
