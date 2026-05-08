@@ -69,7 +69,6 @@ body {
   gap: 12px;
   overscroll-behavior: contain;
 }
-
 /* ===== CARDS ===== */
 .card {
   background: #ffffff;
@@ -77,8 +76,8 @@ body {
   overflow: hidden;
   box-shadow: 0 1px 6px rgba(27, 27, 40, 0.08);
   border: 1px solid #e4ddd3;
+  flex-shrink: 0; /* Verhindert das Zusammenquetschen der Boxen auf mobilen Geräten */
 }
-
 .card-header {
   display: flex;
   align-items: center;
