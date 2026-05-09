@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    @apply bg-apex-bg text-apex-text-primary font-sans;
+    min-height: 100vh;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-apex-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-600;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-apex-blue/20 text-apex-text-primary;
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    @apply outline-none ring-1 ring-apex-blue/50 ring-offset-1 ring-offset-apex-bg;
+  }
+}
+
+@layer components {
+  /* Data display */
+  .data-value {
+    @apply font-mono text-apex-text-primary tabular-nums;
+  }
+
+  .data-label {
+    @apply text-2xs font-medium uppercase tracking-widest text-apex-text-muted;
+  }
+
+  /* Signal bar */
+  .signal-bar {
+    @apply h-0.5 rounded-full bg-apex-border overflow-hidden;
+  }
+
+  .signal-bar-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+  }
+
+  /* Domain card */
+  .domain-card {
+    @apply bg-apex-surface border border-apex-border rounded-lg p-4
+           hover:border-zinc-700 transition-colors duration-150;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply bg-apex-surface border border-apex-border rounded-lg p-3
+           flex flex-col gap-1;
+  }
+
+  /* Input base */
+  .apex-input {
+    @apply w-full bg-apex-surface-2 border border-apex-border rounded-md
+           px-3 py-2 text-sm text-apex-text-primary placeholder:text-apex-text-muted
+           focus:outline-none focus:ring-1 focus:ring-apex-blue/50 focus:border-apex-blue/30
+           transition-colors duration-150;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-apex-blue hover:bg-blue-500 text-white
+           rounded-md px-4 py-2 text-sm font-medium
+           transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           text-apex-text-secondary hover:text-apex-text-primary hover:bg-apex-surface-2
+           rounded-md px-3 py-2 text-sm font-medium
+           transition-colors duration-150;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2
+           border border-apex-border hover:border-zinc-600
+           text-apex-text-secondary hover:text-apex-text-primary
+           rounded-md px-4 py-2 text-sm font-medium
+           transition-colors duration-150;
+  }
+
+  /* Section header */
+  .section-header {
+    @apply text-2xs font-semibold uppercase tracking-widest text-apex-text-muted mb-3;
+  }
+
+  /* Divider */
+  .apex-divider {
+    @apply border-t border-apex-border;
+  }
+}
+
+/* Recharts overrides */
+.recharts-cartesian-axis-tick-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: #52525B;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
